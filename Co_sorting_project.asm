@@ -1,43 +1,20 @@
 .data
 Arr:    .word 0,0,0,0,0,0,0,0,0,0   
-choice1: .word 0
-choice2: .word 0 
+choice: .word 0
 length: .word 10	
 text:   .asciiz "enter a number\n"
 nLine:  .asciiz "\n"
-	NumOrCHar1: .asciiz "do you want to sort numbers or letters?\n"		
-	NumOrCHar2: .asciiz "enter 1 for numbers or 2 for letters\n"
+
 	promptSort1: .asciiz "what sorting algorithm do you want to be used?\n"
 	promptSort2: .asciiz "enter 1 for bubble sort, 2 for selection sort or 3 for merge sort\n"
 	promptSort3: .asciiz "please enter a number:\n"
 	
-	eol:		.asciiz	"\n"
 	
 
 .text
 
 	main:
 
-	# a0 has NumOrCHar1
-	# t0 has NumOrCHar2
-		la $a0, NumOrCHar1
-		la $t0, NumOrCHar2
-	# printing NumOrCHar1
-		li $v0, 4
-		syscall
-	# moving NumOrCHar2 into a0
-		move $a0, $t0
-	# printing NumOrCHar2
-		li $v0,4
-		syscall
-		
-	# scan from user the choice in choice1
-		li $v0, 5
-		syscall
-		
-	# move value from v0 to t0 then store it in choice1
-		move $t0, $v0
-		sw $t0, choice1
 
 	# prompt choosing sorting algorithm
 		la $a0, promptSort1
@@ -47,17 +24,17 @@ nLine:  .asciiz "\n"
 		move $a0, $t0
 		li $v0, 4
 		syscall
-	# scan the user's choice in choice2
+	# scan the user's choice in choice
 		li $v0, 5
 		syscall		
 		move $t0, $v0
-		sw $t0, choice2
+		sw $t0, choice
 
-	# scan the data from the user
+	# go to the algorithm that was chosen
 	
-	lw $t0, choice2
-	beq $t0,3 , merging
-	beq $t0,1 , bubbleSort
+	lw $t0, choice
+	beq $t0,3 , mergeSortAlgo
+	beq $t0,1 , bubbleSortAlgo
 	
 		
 
@@ -66,163 +43,155 @@ nLine:  .asciiz "\n"
 		li $v0, 10
 		syscall
 	
+	
 		
-	bubbleSort:
-		li      $t1,10                   # get total number of array elements
-    		j scanData
-
-# main_loop -- do multiple passes through array
-main_loop:
-    subi    $a1,$t1,1               # get count for this pass (must be one less)
-    blez    $a1,main_done           # are we done? if yes, fly
-
-    la      $a0,Arr                 # get address of array
-    li      $t2,0                   # clear the "did swap" flag
-
-    jal     pass_loop               # do a single sort pass
-
-    # NOTES:
-    # (1) if we make no swaps on a given pass, everything is in sort and we
-    #     can stop
-    # (2) after a pass the last element is now highest, so there is no need
-    #     to compare it again
-    # (3) a standard optimization is that each subsequent pass shortens the
-    #     pass count by 1
-    # (4) by bumping down the outer loop count here, this serves both _us_ and
-    #     the single pass routine [with a single register]
-
-    beqz    $t2,main_done           # if no swaps on current pass, we are done
-
-    subi    $t1,$t1,1               # bump down number of remaining passes
-    b       main_loop
-
-# everything is sorted
-# do whatever with the sorted data ...
-
-
-scanData:
-addi $t8, $zero, 10
-la $t2, Arr
-while_scan:
-beqz $t8, main_loop
-
-la $a0, text
-li $v0, 4
-syscall
-
-li $v0, 5
-syscall
-move $t0, $v0
-
-sw $t0, ($t2)
-
-addi $t8, $t8, -1
-addi $t2, $t2, 4
-j while_scan
-
-
-main_done:
-
-li      $v0, 0
-la      $t1, Arr
-addi $t0, $zero, 0
-loop1:
-    bge     $t0, 10, end
-
-    # load word from addrs and goes to the next addrs
-    lw      $t2, 0($t1)
-    addi    $t1, $t1, 4
-    
-    la $a0, nLine
-    li $v0, 4
-    syscall
-
-    # syscall to print value
-    li      $v0, 1      
-    move    $a0, $t2
-    syscall
-
-    #increment counter
-    addi    $t0, $t0, 1
-    j      loop1
-
-# pass_loop -- do single pass through array
-#   a0 -- address of array
-#   a1 -- number of loops to perform (must be one less than array size because
-#         of the 4($a0) below)
-pass_loop:
-    lw      $s1,0($a0)              # Load first element in s1
-    lw      $s2,4($a0)              # Load second element in s2
-    bgt     $s1,$s2,pass_swap       # if (s1 > s2) swap elements
-
-pass_next:
-    addiu   $a0,$a0,4               # move pointer to next element
-    subiu   $a1,$a1,1               # decrement number of loops remaining
-    bgtz    $a1,pass_loop           # swap pass done? if no, loop
-    jr      $ra                     # yes, return
-
-pass_swap:
-    sw      $s1,4($a0)              # put value of [i+1] in s1
-    sw      $s2,0($a0)              # put value of [i] in s2
-    li      $t2,1                   # tell main loop that we did a swap
-    j       pass_next
-
-# End the program
-end:
-    li      $v0,10
-    syscall
+			
 				
-					
 						
-								
-	merging:	
-		scanDataMerge:
-		addi $t8, $zero, 10
-		la $t2, Arr
-		while_scanMerge:
-		beqz $t8, cont
+	bubbleSortAlgo:
+		lw      $t1,length		# get total number of array elements
+    		j scanData			# go to scanData to scan the array from the user	
+
+	# main_loop of the bubble sort
+	# it does multiple loops through the array
+	main_loop:
+			subi    $a1,$t1,1               # get the count for this loop (must be one less)
+			blez    $a1,main_done           # check if done sorting then go to main_done
+
+			la      $a0,Arr                 # get the address of the array
+			li      $t2,0                   # clear the "did swap" flag
 		
-		la $a0, text
+			jal     pass_loop               # do a single loop pass
+
+    # if we make no swaps on a given loop, everything is in sort and we can stop
+    # after a loop the last element is now highest, so there is no need to compare it again
+    # a standard operation is that each loop shortens the loop count($a1) by 1
+
+			beqz    $t2,main_done           	# if no swaps on current loop, go to main_done
+								# otherwise continue
+
+			subi    $t1,$t1,1               	# decrease the number of remaining loops by one
+			b       main_loop			# go back to main_loop
+
+	# scanData scans the array for bubble sort from the user and store it in Arr
+	scanData:
+	# $t8 is counter for while_scan, it starts with 10 and decreases by one with each loop
+	addi $t8, $zero, 10
+	la $t2, Arr		# load the address of Arr in $t2
+	# enter the while loop
+	while_scan:
+		beqz $t8, main_loop	# if $t8 = 0 then we are done scaning then go back to main_loop
+
+		la $a0, text		# load address of text in $a0 to print it
 		li $v0, 4
 		syscall
 
-		li $v0, 5
+		li $v0, 5		# scan the number
 		syscall
 		move $t0, $v0
 
-		sw $t0, ($t2)
+		sw $t0, ($t2)		# store the number in the array 
 
-		addi $t8, $t8, -1
-		addi $t2, $t2, 4
-		j while_scanMerge
+		addi $t8, $t8, -1	# decrease the number of the loop ($t8)
+		addi $t2, $t2, 4	# increase the number of the address by four to point to the address of the next index
+	
+	#go back to while
+	j while_scan
 
-	cont:
-		# sending data to choosen algorithm
-		lw $t0, choice2
-		beq $t0, 3 , mergeSortAlgorithm
-
+	#main_done prints the array
+	main_done:
 		
-		li $v0, 10
+		la      $t1, Arr	#load address of Arr in $t1
+		addi $t0, $zero, 0	#intialize $t0 with value 0 to use as a counter in loop1
+		loop1:
+			bge     $t0, 10, end	#if counter ($t0) >=10 then go to end otherwise continue
+
+    			# load word from the address and put it in $t2
+			lw      $t2, 0($t1)
+			addi    $t1, $t1, 4	#increment the address by 4 bites to go to the next index
+    
+			la $a0, nLine		#load the address of text nLine to print a new line
+			li $v0, 4
+			syscall
+
+			# syscall to print value
+			li      $v0, 1      
+			move    $a0, $t2	# move the value from $t2 to $a0 to print it
+			syscall
+
+			#increment counter ($t0)
+			addi    $t0, $t0, 1
+			j      loop1	# go back to loop1
+
+	# pass_loop does a single loop through the array
+	# a0 = address of array
+	# a1 = maximum number of loops to allowed to be performed
+	pass_loop:
+		lw      $s1,0($a0)              # Load first element in s1
+		lw      $s2,4($a0)              # Load second element in s2
+		bgt     $s1,$s2,pass_swap       # if (s1) > (s2) go to pass_swap to swap elements
+
+	# decrement counter($a1) and move pointer by four byte to the next index in the array
+	pass_next:
+		addi   $a0,$a0,4               # move pointer to next element
+		subi   $a1,$a1,1               # decrement number of loops remaining
+		bgtz   $a1,pass_loop           # if ($a1) "did swap" flag is more than 0 i.e. = 1 then go to pass_loop otherwise go back to main_loop 
+		jr     $ra                     # return to main_loop
+
+	# swaps the values of two elements
+	pass_swap:
+		sw      $s1,4($a0)              # put value of [i+1](s1) in first element
+		sw      $s2,0($a0)              # put value of [i](s2) in the second element
+		li      $t2,1                   # put value 1 in the "did swap" flag
+		j       pass_next
+
+	# End the program
+	end:
+		li      $v0,10
 		syscall
+				
+					
+						
+	#merge sort algorithm						
+	mergeSortAlgo:	
+		#scan the numbers from the user and put it in Arr
+		scanDataMerge:
+			#intialize counter ($t8) to 10
+			addi $t8, $zero, 10
+			la $t2, Arr	#load address of the array Arr in ($t2)
+			while_scanMerge:
+				beqz $t8, mergeSortAlgorithm	#if counter($t8) = 0 then go to mergeSortAlgorithm
+		
+				la $a0, text	#load address of text to print it
+				li $v0, 4
+				syscall
+	
+				li $v0, 5	#scan number and store it
+				syscall
+				move $t0, $v0
+
+				sw $t0, ($t2)	#store number in the address of the array
+
+				addi $t8, $t8, -1	#decrement counter ($t8)
+				addi $t2, $t2, 4	#increase address by four to point to the next index in the array
+				j while_scanMerge	#go back to while_scanMerge
+
 	
 
 	mergeSortAlgorithm:
 	
 		la	$a0, Arr		# Load the start address of the array
 		lw	$t0, length		# Load the array length
-		sll	$t0, $t0, 2		# Multiple the array length by 4 (the size of the elements)
+		sll	$t0, $t0, 2		# Multiply the array length by 4 (the size of the elements)
 		add	$a1, $a0, $t0		# Calculate the array end address
 		jal	mergesort		# Call the merge sort function
   		b	sortend			# We are finished sorting
 	
 		li	$v0,10
 		syscall
-		##
-		# Recrusive mergesort function
-		#
-		# @param $a0 first address of the array
-		# @param $a1 last address of the array
-		##
+		# $a0 = first address of the array
+		# $a1 = last address of the array
+
 		mergesort:
 
 		addi	$sp, $sp, -16		# Adjust stack pointer
@@ -235,8 +204,8 @@ end:
 		ble	$t0, 4, mergesortend	# If the array only contains a single element, just return	
 	
 		srl	$t0, $t0, 3		# Divide the array size by 8 to half the number of elements (shift right 3 bits)
-		sll	$t0, $t0, 2		# Multiple that number by 4 to get half of the array size (shift left 2 bits)
-		add	$a1, $a0, $t0		# Calculate the midpoint address of the array
+		sll	$t0, $t0, 2		# Multiply that number by 4 to get half of the array size (shift left 2 bits)
+		add	$a1, $a0, $t0		# Calculate the midpoint address of the array by addint the mid size to the start address
 		sw	$a1, 12($sp)		# Store the array midpoint address on the stack
 	
 		jal	mergesort		# Call recursively on the first half of the array
@@ -258,13 +227,11 @@ end:
 		addi	$sp, $sp, 16		# Adjust the stack pointer
 		jr	$ra			# Return 
 	
-		##
-		# Merge two sorted, adjacent arrays into one, in-place
-		#
-		# @param $a0 First address of first array
-		# @param $a1 First address of second array
-		# @param $a2 Last address of second array
-		##
+
+		# merge two adjacent arrays into one sorted array
+		# $a0 = First address of first array
+		# $a1 = First address of second array
+		# $a2 = Last address of second array
 		merge:
 		addi	$sp, $sp, -16		# Adjust the stack pointer
 		sw	$ra, 0($sp)		# Store the return address on the stack
@@ -272,8 +239,8 @@ end:
 		sw	$a1, 8($sp)		# Store the midpoint address on the stack
 		sw	$a2, 12($sp)		# Store the end address on the stack
 		
-		move	$s0, $a0		# Create a working copy of the first half address
-		move	$s1, $a1		# Create a working copy of the second half address
+		move	$s0, $a0		# Create a copy of the first half address
+		move	$s1, $a1		# Create a copy of the second half address
 		
 		mergeloop:
 	
@@ -284,41 +251,44 @@ end:
 		
 		bgt	$t1, $t0, noshift	# If the lower value is already first, don't shift
 		
-		move	$a0, $s1		# Load the argument for the element to move
-		move	$a1, $s0		# Load the argument for the address to move it to
+		move	$a0, $s1		# Load the value for the element to move
+		move	$a1, $s0		# Load the value for the address to move it to
 		jal	shift			# Shift the element to the new position 
 		
 		addi	$s1, $s1, 4		# Increment the second half index
+		
+		#increments the address of the first half index by four bits
 		noshift:
 		addi	$s0, $s0, 4		# Increment the first half index
-	
 		lw	$a2, 12($sp)		# Reload the end address
-		bge	$s0, $a2, mergeloopend	# End the loop when both halves are empty
-		bge	$s1, $a2, mergeloopend	# End the loop when both halves are empty
-		b	mergeloop
+		bge	$s0, $a2, mergeloopend	# End the loop when both halves are empty i.e. the copy of the first address = the end address
+		bge	$s1, $a2, mergeloopend	# End the loop when both halves are empty i.e. the copy of the second address = the end address
+		b	mergeloop	#go back to mergeloop
 	
+		#merge loop is done so go back to mergesort
 		mergeloopend:
 		
 		lw	$ra, 0($sp)		# Load the return address
 		addi	$sp, $sp, 16		# Adjust the stack pointer
 		jr 	$ra			# Return
 
-		##
-		# Shift an array element to another position, at a lower address
-		#
-		# @param $a0 address of element to shift
-		# @param $a1 destination address of element
-		##
+		
+		# Shift an array element to another position at a lower address
+		# $a0 address of element to shift
+		# $a1 destination address of element
+		
 		shift:
-		li	$t0, 10
-		ble	$a0, $a1, shiftend	# If we are at the location, stop shifting
-		addi	$t6, $a0, -4		# Find the previous address in the array
-		lw	$t7, 0($a0)		# Get the current pointer
+		li	$t0, 10			# load the size in $t0
+		ble	$a0, $a1, shiftend	# If we are at the location, stop shifting	#($a1) is address of first half
+		addi	$t6, $a0, -4		# Find the previous address in the array	#($a0) is address of second half
+		lw	$t7, 0($a0)		# Get the current pointer	
 		lw	$t8, 0($t6)		# Get the previous pointer
 		sw	$t7, 0($t6)		# Save the current pointer to the previous address
 		sw	$t8, 0($a0)		# Save the previous pointer to the current address
 		move	$a0, $t6		# Shift the current position back
 		b 	shift			# Loop again
+		
+		#go back to the stored address of the mergeloop
 		shiftend:
 		jr	$ra			# Return
 	
@@ -327,19 +297,19 @@ end:
 
 		# Print out the indirect array
 		li	$t0, 0				# Initialize the current index
-		prloop:
+		loop_2:
 		lw	$t1,length			# Load the array length
-		bge	$t0,$t1,prdone			# If we hit the end of the array, we are done
+		bge	$t0,$t1,done			# If we hit the end of the array, we are done
 		sll	$t2,$t0,2			# Multiply the index by 4 (2^2)
 		la	$t3,Arr($t2)			# Get the pointer
 		lw	$a0,0($t3)			# Get the value pointed to and store it for printing
 		li	$v0,1				
 		syscall					# Print the value
-		la	$a0,eol				# Set the value to print to the newline
+		la	$a0,nLine			# Set the value to print to the newline
 		li	$v0,4				
 		syscall					# Print the value
 		addi	$t0,$t0,1			# Increment the current index
-		b	prloop				# Run through the print block again
-		prdone:					# We are finished
+		b	loop_2				# Run through the print block again
+		done:					# We are finished
 		li	$v0,10
 		syscall
